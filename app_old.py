@@ -1,19 +1,7 @@
 from flask import Flask, render_template, jsonify, request
 from bokeh.plotting import figure
 from bokeh.embed import components
-from bokeh.models import AjaxDataSource, CustomJS
-
-
-adapter = CustomJS(code="""
-    const result = {x: [], y: []}
-    const {points} = cb_data.response
-    for (const [x, y] of points) {
-        result.x.push(x)
-        result.y.push(y)
-    }
-    return result
-""")
-
+from bokeh.models.sources import AjaxDataSource
 
 app = Flask(__name__)
 
@@ -25,24 +13,36 @@ def index():
 def show_dashboard():
     plots = []
     plots.append(make_ajax_plot())
+    #plots.append(make_plot())
 
     return render_template('dashboard.html', plots=plots)
 
-#x = 0
-x = [0]
-y = [0]
-
+x = 0
 @app.route('/data/', methods=['POST'])
 def data():
-    x.append(x[-1] + 1)
-    y.append(2 ** x[-1])
-    #print(f"x: {x}, y: {y}")
-    return jsonify(points=list(zip(x,y)))
+    global x
+    x += 1
+    y = 2**x
+    print(f"x: {x}, y: {y}")
+    return jsonify(x=x, y=y)
+
+#def make_plot():
+#    plot = figure(plot_height=300, sizing_mode='scale_width')
+#
+#    x = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+#    y = [2**v for v in x]
+#
+#    plot.line(x, y, line_width=4)
+#
+#    script, div = components(plot)
+#    return script, div
 
 def make_ajax_plot(): 
     source = AjaxDataSource(data_url=request.url_root + 'data/',
-                            polling_interval=1000, adapter=adapter)
+                            polling_interval=2000, mode='append')
 
+    source.data = dict(x=[], y=[])
+    print(f"source data: {source.data}") 
     plot = figure(plot_height=150, sizing_mode='scale_width')
     plot.line('x', 'y', source=source, line_width=4)
 
